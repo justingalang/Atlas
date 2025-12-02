@@ -1,13 +1,9 @@
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from './firebaseConfig';
+import firebaseConfig, { hasFirebaseConfig } from './firebaseConfig';
 
-const hasPlaceholderValues = Object.values(firebaseConfig).some(
-  (value) => typeof value === 'string' && value.toLowerCase().includes('your-')
-);
-
-export const isFirebaseConfigured = !hasPlaceholderValues;
+export const isFirebaseConfigured = hasFirebaseConfig;
 
 let app = null;
 
@@ -16,7 +12,7 @@ if (isFirebaseConfigured) {
   app = existingApps.length ? existingApps[0] : initializeApp(firebaseConfig);
 } else {
   console.warn(
-    'Firebase config still has placeholder values. Update mobile/firebaseConfig.js with your project keys.'
+    'Firebase config is missing. Set Firebase env vars in mobile/.env (see .env.example).'
   );
 }
 

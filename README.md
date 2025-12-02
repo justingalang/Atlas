@@ -18,7 +18,7 @@ npm run start        # starts the Expo dev server
 
 ## Firebase setup
 1) In the Firebase console, create a project and add a Web app to get config values.
-2) Copy `mobile/firebaseConfig.example.js` to `mobile/firebaseConfig.js` and replace every placeholder with your project keys.
+2) In `mobile`, copy `.env.example` to `.env` and fill in all Firebase keys.
 3) From the Firebase console, create a Firestore database (in test mode is fine for local dev).
 4) Back in the app, tap **Send test ping to Firestore**. A document will be written to the `pings` collection when configuration is correct.
 

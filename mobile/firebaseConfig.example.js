@@ -1,10 +1,4 @@
-// Copy this file to firebaseConfig.js and replace the placeholder values
-// with the config from your Firebase project's web app settings.
-export default {
-  apiKey: 'your-api-key',
-  authDomain: 'your-project-id.firebaseapp.com',
-  projectId: 'your-project-id',
-  storageBucket: 'your-project-id.appspot.com',
-  messagingSenderId: 'your-messaging-sender-id',
-  appId: 'your-app-id',
-};
+// Firebase config now loads from Expo extra values defined in app.config.js
+// using environment variables. See mobile/.env.example for required keys.
+// This file remains for reference only.
+export { default } from './firebaseConfig';
