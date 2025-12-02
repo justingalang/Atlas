@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
+import { fetchMaskedSecret } from './services/secretService';
 
 export default function App() {
   const [status, setStatus] = useState(
@@ -13,6 +14,8 @@ export default function App() {
   );
   const [lastPingId, setLastPingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [secretInfo, setSecretInfo] = useState(null);
+  const [isFetchingSecret, setIsFetchingSecret] = useState(false);
 
   const firebaseStatusColor = useMemo(
     () => (isFirebaseConfigured ? '#0c8a4c' : '#c22f2f'),
@@ -40,6 +43,24 @@ export default function App() {
     }
   }, []);
 
+  const handleFetchSecret = useCallback(async () => {
+    if (!isFirebaseConfigured) {
+      setStatus('Firebase is not configured yet.');
+      return;
+    }
+    setIsFetchingSecret(true);
+    try {
+      const data = await fetchMaskedSecret();
+      setSecretInfo(data.googleApiKeyMasked || data.message || 'Secret fetched.');
+      setStatus('Fetched masked secret via Cloud Function.');
+    } catch (error) {
+      setSecretInfo(null);
+      setStatus(`Unable to fetch secret: ${error.message}`);
+    } finally {
+      setIsFetchingSecret(false);
+    }
+  }, []);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
@@ -55,11 +76,11 @@ export default function App() {
             <View style={[styles.statusDot, { backgroundColor: firebaseStatusColor }]} />
           </View>
           <Text style={styles.cardBody}>{status}</Text>
-          {lastPingId ? (
-            <Text style={styles.cardFootnote}>Last ping document id: {lastPingId}</Text>
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [
+        {lastPingId ? (
+          <Text style={styles.cardFootnote}>Last ping document id: {lastPingId}</Text>
+        ) : null}
+        <Pressable
+          style={({ pressed }) => [
               styles.button,
               (!isFirebaseConfigured || isSaving) && styles.buttonDisabled,
               pressed && styles.buttonPressed,
@@ -76,6 +97,28 @@ export default function App() {
           <Text style={styles.helperText}>
             The ping writes to a `pings` collection. Configure your Firebase keys, then tap the
             button and look for the new document in the Firebase console.
+          </Text>
+          <View style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [
+              styles.buttonSecondary,
+              (!isFirebaseConfigured || isFetchingSecret) && styles.buttonDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleFetchSecret}
+            disabled={!isFirebaseConfigured || isFetchingSecret}
+          >
+            {isFetchingSecret ? (
+              <ActivityIndicator color="#0f7ae5" />
+            ) : (
+              <Text style={styles.buttonSecondaryLabel}>Fetch masked secret</Text>
+            )}
+          </Pressable>
+          {secretInfo ? <Text style={styles.cardFootnote}>{secretInfo}</Text> : null}
+          <Text style={styles.helperText}>
+            This calls the callable function `getSecret`, which reads the Google API key from
+            Firebase Secret Manager and returns a masked value. Anonymous auth must be enabled for
+            this sample.
           </Text>
         </View>
       </SafeAreaView>
@@ -161,12 +204,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  buttonSecondary: {
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#0f7ae5',
+    backgroundColor: '#fff',
+  },
+  buttonSecondaryLabel: {
+    color: '#0f7ae5',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   helperText: {
     marginTop: 12,
     fontSize: 13,
     lineHeight: 18,
     color: '#4f5664',
     textAlign: 'center',
+  },
+  divider: {
+    marginVertical: 14,
+    height: 1,
+    backgroundColor: '#e4e7ed',
   },
   footer: {
     alignItems: 'center',

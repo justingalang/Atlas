@@ -30,3 +30,28 @@ npm run start        # starts the Expo dev server
 3) In the terminal, press `s` to switch to tunnel mode if your network blocks LAN discovery, or stay on LAN if both devices are on the same network.
 4) Scan the QR code with the iOS Camera app (or paste the URL into Expo Go).
 5) The app will reload automatically when you edit files.
+
+## Cloud Function: Secret Manager sample
+- Location: `functions/getSecret/index.js`
+- Callable function that loads `GOOGLE_API_KEY` from Firebase Secret Manager, requires auth, and returns a masked value (do not forward raw secrets to clients).
+
+Setup:
+```bash
+cd functions
+npm install
+firebase functions:secrets:set GOOGLE_API_KEY
+firebase deploy --only functions:getSecret
+```
+
+Client call (Expo app), after Firebase app init:
+```js
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { firebaseApp } from './firebase';
+
+const functions = getFunctions(firebaseApp);
+const getSecret = httpsCallable(functions, 'getSecret');
+const result = await getSecret();
+console.log(result.data);
+```
+
+Note: The provided client sample in `mobile/services/secretService.js` uses anonymous auth to call the function, so enable Anonymous provider in Firebase Authentication for local testing.
