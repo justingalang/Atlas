@@ -19,12 +19,14 @@ exports.getSecret = onCall({ secrets: [googleApiKey] }, (request) => {
 
   const key = googleApiKey.value();
   if (!key) {
-    throw new HttpsError('failed-precondition', 'GOOGLE_API_KEY secret is not set.');
+    throw new HttpsError('failed-precondition', 
+      'GOOGLE_API_KEY secret is not set.');
   }
 
   return {
     message: 'Secret loaded via Firebase Secret Manager.',
     googleApiKeyMasked: maskSecret(key),
-    note: 'Use this function server-side; do not forward raw secrets to clients.',
+    note: 
+    'Use this function server-side; do not forward raw secrets to clients.',
   };
 });
