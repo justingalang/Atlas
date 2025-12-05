@@ -1,16 +1,23 @@
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
-import { fetchMaskedSecret } from './services/secretService';
+import {StatusBar} from 'expo-status-bar';
+import {useCallback, useMemo, useState} from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {addDoc, collection, serverTimestamp} from 'firebase/firestore';
+import {db, isFirebaseConfigured} from './firebase';
+import {fetchMaskedSecret} from './services/secretService';
+import Home from './Home';
 
-export default function App() {
+function TestScreen() {
   const [status, setStatus] = useState(
-    isFirebaseConfigured
-      ? 'Ready to talk to Firebase.'
-      : 'Add your Firebase keys in mobile/firebaseConfig.js.'
+      isFirebaseConfigured
+        ? 'Ready to talk to Firebase.'
+        : 'Add your Firebase keys in mobile/.env.',
   );
   const [lastPingId, setLastPingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -18,8 +25,8 @@ export default function App() {
   const [isFetchingSecret, setIsFetchingSecret] = useState(false);
 
   const firebaseStatusColor = useMemo(
-    () => (isFirebaseConfigured ? '#0c8a4c' : '#c22f2f'),
-    []
+      () => (isFirebaseConfigured ? '#0c8a4c' : '#c22f2f'),
+      [],
   );
 
   const sendTestPing = useCallback(async () => {
@@ -51,7 +58,9 @@ export default function App() {
     setIsFetchingSecret(true);
     try {
       const data = await fetchMaskedSecret();
-      setSecretInfo(data.googleApiKeyMasked || data.message || 'Secret fetched.');
+      setSecretInfo(
+          data.googleApiKeyMasked || data.message || 'Secret fetched.',
+      );
       setStatus('Fetched masked secret via Cloud Function.');
     } catch (error) {
       setSecretInfo(null);
@@ -62,64 +71,128 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
-        <View style={styles.header}>
-          <Text style={styles.title}>Atlas mobile starter</Text>
-          <Text style={styles.subtitle}>Expo • React Native • Firebase</Text>
-        </View>
+    <View style={styles.screenContainer}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Atlas test page</Text>
+        <Text style={styles.subtitle}>Expo • React Native • Firebase</Text>
+      </View>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Firebase status</Text>
-            <View style={[styles.statusDot, { backgroundColor: firebaseStatusColor }]} />
-          </View>
-          <Text style={styles.cardBody}>{status}</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Firebase status</Text>
+          <View
+            style={[
+              styles.statusDot,
+              {backgroundColor: firebaseStatusColor},
+            ]}
+          />
+        </View>
+        <Text style={styles.cardBody}>{status}</Text>
         {lastPingId ? (
-          <Text style={styles.cardFootnote}>Last ping document id: {lastPingId}</Text>
+          <Text style={styles.cardFootnote}>
+            Last ping document id: {lastPingId}
+          </Text>
         ) : null}
         <Pressable
-          style={({ pressed }) => [
-              styles.button,
-              (!isFirebaseConfigured || isSaving) && styles.buttonDisabled,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={sendTestPing}
-            disabled={!isFirebaseConfigured || isSaving}
-          >
-            {isSaving ? (
-              <ActivityIndicator color="#f6f7fb" />
-            ) : (
-              <Text style={styles.buttonLabel}>Send test ping to Firestore</Text>
-            )}
-          </Pressable>
-          <Text style={styles.helperText}>
-            The ping writes to a `pings` collection. Configure your Firebase keys, then tap the
-            button and look for the new document in the Firebase console.
-          </Text>
-          <View style={styles.divider} />
+          style={({pressed}) => [
+            styles.button,
+            (!isFirebaseConfigured || isSaving) && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={sendTestPing}
+          disabled={!isFirebaseConfigured || isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator color="#f6f7fb" />
+          ) : (
+            <Text style={styles.buttonLabel}>
+              Send test ping to Firestore
+            </Text>
+          )}
+        </Pressable>
+        <Text style={styles.helperText}>
+          The ping writes to a `pings` collection. Configure your Firebase keys,
+          then tap the button and look for the new document in the Firebase
+          console.
+        </Text>
+        <View style={styles.divider} />
+        <Pressable
+          style={({pressed}) => [
+            styles.buttonSecondary,
+            (!isFirebaseConfigured || isFetchingSecret) && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={handleFetchSecret}
+          disabled={!isFirebaseConfigured || isFetchingSecret}
+        >
+          {isFetchingSecret ? (
+            <ActivityIndicator color="#0f7ae5" />
+          ) : (
+            <Text style={styles.buttonSecondaryLabel}>
+              Fetch masked secret
+            </Text>
+          )}
+        </Pressable>
+        {secretInfo ? (
+          <Text style={styles.cardFootnote}>{secretInfo}</Text>
+        ) : null}
+        <Text style={styles.helperText}>
+          This calls the callable function `getSecret`, which reads the Google
+          API key from Firebase Secret Manager and returns a masked value.
+          Anonymous auth must be enabled for this sample.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+export default function App() {
+  const [activeScreen, setActiveScreen] = useState('home');
+
+  const isHome = activeScreen === 'home';
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.appContainer}>
+        <StatusBar style="dark" />
+        <View style={styles.navbar}>
           <Pressable
-            style={({ pressed }) => [
-              styles.buttonSecondary,
-              (!isFirebaseConfigured || isFetchingSecret) && styles.buttonDisabled,
-              pressed && styles.buttonPressed,
+            onPress={() => setActiveScreen('home')}
+            style={({pressed}) => [
+              styles.navButton,
+              isHome && styles.navButtonActive,
+              pressed && styles.navButtonPressed,
             ]}
-            onPress={handleFetchSecret}
-            disabled={!isFirebaseConfigured || isFetchingSecret}
           >
-            {isFetchingSecret ? (
-              <ActivityIndicator color="#0f7ae5" />
-            ) : (
-              <Text style={styles.buttonSecondaryLabel}>Fetch masked secret</Text>
-            )}
+            <Text
+              style={[
+                styles.navButtonLabel,
+                isHome && styles.navButtonLabelActive,
+              ]}
+            >
+              Home
+            </Text>
           </Pressable>
-          {secretInfo ? <Text style={styles.cardFootnote}>{secretInfo}</Text> : null}
-          <Text style={styles.helperText}>
-            This calls the callable function `getSecret`, which reads the Google API key from
-            Firebase Secret Manager and returns a masked value. Anonymous auth must be enabled for
-            this sample.
-          </Text>
+          <Pressable
+            onPress={() => setActiveScreen('test')}
+            style={({pressed}) => [
+              styles.navButton,
+              !isHome && styles.navButtonActive,
+              pressed && styles.navButtonPressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.navButtonLabel,
+                !isHome && styles.navButtonLabelActive,
+              ]}
+            >
+              Test
+            </Text>
+          </Pressable>
+        </View>
+        <View style={styles.body}>
+          {isHome ? <Home /> : <TestScreen />}
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -127,7 +200,46 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  appContainer: {
+    flex: 1,
+    backgroundColor: '#f6f7fb',
+  },
+  body: {
+    flex: 1,
+  },
+  navbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e4e7ed',
+  },
+  navButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d7dce3',
+    backgroundColor: '#f8fafc',
+  },
+  navButtonActive: {
+    backgroundColor: '#0f7ae5',
+    borderColor: '#0f7ae5',
+  },
+  navButtonPressed: {
+    opacity: 0.95,
+  },
+  navButtonLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  navButtonLabelActive: {
+    color: '#f6f7fb',
+  },
+  screenContainer: {
     flex: 1,
     backgroundColor: '#f6f7fb',
     paddingHorizontal: 20,
