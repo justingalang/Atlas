@@ -61,7 +61,7 @@ export default function NameField({
         autoCorrect={false}
       />
 
-      {nameSuggestionsVisible && (
+      {nameSuggestionsVisible && filteredOptions.length > 0 && (
         <View
           style={{
             borderWidth: 1,
@@ -72,54 +72,41 @@ export default function NameField({
             overflow: 'hidden',
           }}
         >
-          {filteredOptions.length === 0 ? (
-            <Text
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                color: '#9ca3af',
-              }}
-              selectable
-            >
-              No matches found
-            </Text>
-          ) : (
-            <ScrollView
-              style={{maxHeight: 180}}
-              keyboardShouldPersistTaps="handled"
-            >
-              {filteredOptions.map((option) => {
-                const isSelected = option === selectedSuggestion;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => handleSelect(option)}
-                    style={({pressed}) => ({
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      borderBottomWidth: 1,
-                      borderBottomColor: '#f1f5f9',
-                      backgroundColor: isSelected
-                        ? '#e0f2fe'
-                        : pressed
-                          ? '#f8fafc'
-                          : '#fff',
-                    })}
+          <ScrollView
+            style={{maxHeight: 180}}
+            keyboardShouldPersistTaps="handled"
+          >
+            {filteredOptions.map((option) => {
+              const isSelected = option === selectedSuggestion;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => handleSelect(option)}
+                  style={({pressed}) => ({
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#f1f5f9',
+                    backgroundColor: isSelected
+                      ? '#e0f2fe'
+                      : pressed
+                        ? '#f8fafc'
+                        : '#fff',
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: isSelected ? '#0f172a' : '#111827',
+                      fontWeight: isSelected ? '700' : '400',
+                    }}
+                    selectable
                   >
-                    <Text
-                      style={{
-                        color: isSelected ? '#0f172a' : '#111827',
-                        fontWeight: isSelected ? '700' : '400',
-                      }}
-                      selectable
-                    >
-                      {option}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
+                    {option}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
       )}
     </>
