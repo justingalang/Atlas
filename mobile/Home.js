@@ -1,13 +1,7 @@
 import {useMemo, useRef, useState, useEffect} from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import NameField from './components/NameField';
+import ListItem from './components/ListItem';
 
 const formatToday = () => {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -33,7 +27,6 @@ export default function Home() {
     setItems((prev) => prev.map((item, i) => (i === index ? text : item)));
   };
 
-  const [nameSuggestionsVisible, setNameSuggestionsVisible] = useState(false);
   const nameOptions = useMemo(
     () => [
       'Alice Johnson',
@@ -47,28 +40,6 @@ export default function Home() {
     ],
     [],
   );
-
-  const filteredNameOptions = useMemo(() => {
-    const query = name.trim().toLowerCase();
-    if (!query) {
-      return nameOptions.slice(0, 5);
-    }
-    return nameOptions.filter((option) =>
-      option.toLowerCase().includes(query),
-    );
-  }, [nameOptions, name]);
-
-  const handleSelectName = (option) => {
-    setName(option);
-    setNameSuggestionsVisible(false);
-  };
-
-  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
-
-  const handleSuggestionPress = (option) => {
-    setSelectedSuggestion(option);
-    handleSelectName(option);
-  };
 
   useEffect(() => {
     if (items.length < 2) {
@@ -97,124 +68,33 @@ export default function Home() {
       <View style={styles.card}>
         <View style={{marginBottom: 18}}>
           <Text style={styles.label}>Name</Text>
-          <TextInput
+          <NameField
             value={name}
-            onChangeText={(text) => {
-              setName(text);
-              setSelectedSuggestion(null);
-              setNameSuggestionsVisible(true);
-            }}
-            onFocus={() => setNameSuggestionsVisible(true)}
-            onBlur={() => {
-              setTimeout(() => setNameSuggestionsVisible(false), 150);
-            }}
-            placeholder="Name"
-            placeholderTextColor="#6b7280"
-            style={styles.input}
-            autoCorrect={false}
+            onChange={setName}
+            options={nameOptions}
+            inputStyle={styles.input}
           />
-
-          {nameSuggestionsVisible && (
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: '#e5e7eb',
-                borderRadius: 10,
-                marginTop: 8,
-                backgroundColor: '#fff',
-                overflow: 'hidden',
-              }}
-            >
-              {filteredNameOptions.length === 0 ? (
-                <Text
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    color: '#9ca3af',
-                  }}
-                  selectable
-                >
-                  No matches found
-                </Text>
-              ) : (
-                <ScrollView
-                  style={{maxHeight: 180}}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {filteredNameOptions.map((option) => {
-                    const isSelected = option === selectedSuggestion;
-                    return (
-                      <Pressable
-                        key={option}
-                        onPress={() => handleSuggestionPress(option)}
-                        style={({pressed}) => ({
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
-                          borderBottomWidth: 1,
-                          borderBottomColor: '#f1f5f9',
-                          backgroundColor: isSelected
-                            ? '#e0f2fe'
-                            : pressed
-                              ? '#f8fafc'
-                              : '#fff',
-                        })}
-                      >
-                        <Text
-                          style={{
-                            color: isSelected ? '#0f172a' : '#111827',
-                            fontWeight: isSelected ? '700' : '400',
-                          }}
-                          selectable
-                        >
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
-            </View>
-          )}
         </View>
 
-        <Text style={styles.label}>List</Text>
+        <Text style={styles.label}>What did you learn today?</Text>
 
         {items.map((item, index) => (
-          <Swipeable
+          <ListItem
             ref={(ref) => {
               swipeableRefs.current[index] = ref;
             }}
             key={`item-${index}`}
-            renderRightActions={() => (
-              <Pressable
-                onPress={() => handleDeleteItem(index)}
-                style={({pressed}) => ({
-                  backgroundColor: '#ef4444',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  width: 72,
-                  marginTop: 12,
-                  borderRadius: 10,
-                  opacity: pressed ? 0.9 : 1,
-                })}
-              >
-                <Text style={{color: '#fff', fontWeight: '700'}}>Delete</Text>
-              </Pressable>
-            )}
-          >
-            <TextInput
-              value={item}
-              onChangeText={(text) => {
-                updateItem(text, index);
-                if (index === items.length - 1 && text.trim().length > 0) {
-                  addBlankItem();
-                }
-              }}
-              placeholder={`Item ${index + 1}`}
-              style={styles.listInput}
-              placeholderTextColor="#6b7280"
-            />
-          </Swipeable>
+            value={item}
+            placeholder={`Item ${index + 1}`}
+            inputStyle={styles.listInput}
+            onChangeText={(text) => {
+              updateItem(text, index);
+              if (index === items.length - 1 && text.trim().length > 0) {
+                addBlankItem();
+              }
+            }}
+            onDelete={() => handleDeleteItem(index)}
+          />
         ))}
       </View>
     </ScrollView>
