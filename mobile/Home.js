@@ -1,5 +1,5 @@
 import {useMemo, useRef, useState, useEffect} from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Text, View, TextInput} from 'react-native';
 import NameField from './components/NameField';
 import ListItem from './components/ListItem';
 
@@ -15,6 +15,7 @@ const formatToday = () => {
 export default function Home() {
   const [name, setName] = useState('');
   const [items, setItems] = useState(['']);
+  const [place, setPlace] = useState('');
   const swipeableRefs = useRef([]);
 
   const today = useMemo(() => formatToday(), []);
@@ -73,6 +74,16 @@ export default function Home() {
             onChange={setName}
             options={nameOptions}
             inputStyle={styles.input}
+          />
+        </View>
+
+        <View style={{marginBottom: 18}}>
+          <Text style={styles.label}>Place</Text>
+          <TextInput
+            value={place}
+            onChangeText={setPlace}
+            placeholder="Where"
+            style={styles.input}
           />
         </View>
 
