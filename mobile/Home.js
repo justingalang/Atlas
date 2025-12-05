@@ -1,4 +1,4 @@
-import {useMemo, useState, useEffect} from 'react';
+import {useMemo, useRef, useState, useEffect} from 'react';
 import {
   Pressable,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 const formatToday = () => {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -20,6 +21,7 @@ const formatToday = () => {
 export default function Home() {
   const [name, setName] = useState('');
   const [items, setItems] = useState(['']);
+  const swipeableRefs = useRef([]);
 
   const today = useMemo(() => formatToday(), []);
 
@@ -73,6 +75,20 @@ export default function Home() {
       setItems((prev) => (prev.length < 2 ? [...prev, ''] : prev));
     }
   }, [items.length]);
+
+  const closeAllSwipeables = () => {
+    swipeableRefs.current.forEach((ref) => {
+      if (ref?.close) {
+        ref.close();
+      }
+    });
+  };
+
+  const handleDeleteItem = (index) => {
+    closeAllSwipeables();
+    swipeableRefs.current = swipeableRefs.current.filter((_, i) => i !== index);
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -164,19 +180,41 @@ export default function Home() {
         <Text style={styles.label}>List</Text>
 
         {items.map((item, index) => (
-          <TextInput
-            key={`item-${index}`}
-            value={item}
-            onChangeText={(text) => {
-              updateItem(text, index);
-              if (index === items.length - 1 && text.trim().length > 0) {
-                addBlankItem();
-              }
+          <Swipeable
+            ref={(ref) => {
+              swipeableRefs.current[index] = ref;
             }}
-            placeholder={`Item ${index + 1}`}
-            style={styles.listInput}
-            placeholderTextColor="#6b7280"
-          />
+            key={`item-${index}`}
+            renderRightActions={() => (
+              <Pressable
+                onPress={() => handleDeleteItem(index)}
+                style={({pressed}) => ({
+                  backgroundColor: '#ef4444',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: 72,
+                  marginTop: 12,
+                  borderRadius: 10,
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Text style={{color: '#fff', fontWeight: '700'}}>Delete</Text>
+              </Pressable>
+            )}
+          >
+            <TextInput
+              value={item}
+              onChangeText={(text) => {
+                updateItem(text, index);
+                if (index === items.length - 1 && text.trim().length > 0) {
+                  addBlankItem();
+                }
+              }}
+              placeholder={`Item ${index + 1}`}
+              style={styles.listInput}
+              placeholderTextColor="#6b7280"
+            />
+          </Swipeable>
         ))}
       </View>
     </ScrollView>

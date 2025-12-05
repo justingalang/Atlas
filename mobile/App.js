@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {addDoc, collection, serverTimestamp} from 'firebase/firestore';
 import {db, isFirebaseConfigured} from './firebase';
 import {fetchMaskedSecret} from './services/secretService';
@@ -152,50 +153,52 @@ export default function App() {
   const isHome = activeScreen === 'home';
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.appContainer}>
-        <StatusBar style="dark" />
-        <View style={styles.navbar}>
-          <Pressable
-            onPress={() => setActiveScreen('home')}
-            style={({pressed}) => [
-              styles.navButton,
-              isHome && styles.navButtonActive,
-              pressed && styles.navButtonPressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.navButtonLabel,
-                isHome && styles.navButtonLabelActive,
+    <GestureHandlerRootView style={styles.appContainer}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.appContainer}>
+          <StatusBar style="dark" />
+          <View style={styles.navbar}>
+            <Pressable
+              onPress={() => setActiveScreen('home')}
+              style={({pressed}) => [
+                styles.navButton,
+                isHome && styles.navButtonActive,
+                pressed && styles.navButtonPressed,
               ]}
             >
-              Home
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveScreen('test')}
-            style={({pressed}) => [
-              styles.navButton,
-              !isHome && styles.navButtonActive,
-              pressed && styles.navButtonPressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.navButtonLabel,
-                !isHome && styles.navButtonLabelActive,
+              <Text
+                style={[
+                  styles.navButtonLabel,
+                  isHome && styles.navButtonLabelActive,
+                ]}
+              >
+                Home
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setActiveScreen('test')}
+              style={({pressed}) => [
+                styles.navButton,
+                !isHome && styles.navButtonActive,
+                pressed && styles.navButtonPressed,
               ]}
             >
-              Test
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.body}>
-          {isHome ? <Home /> : <TestScreen />}
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+              <Text
+                style={[
+                  styles.navButtonLabel,
+                  !isHome && styles.navButtonLabelActive,
+                ]}
+              >
+                Test
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.body}>
+            {isHome ? <Home /> : <TestScreen />}
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
