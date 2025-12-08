@@ -1,7 +1,7 @@
 import {useMemo, useRef, useState, useEffect} from 'react';
 import {ScrollView, StyleSheet, Text, View, TextInput} from 'react-native';
-import NameField from './components/NameField';
 import ListItem from './components/ListItem';
+import {addDocument} from './services/firebaseService';
 
 const formatToday = () => {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -28,20 +28,6 @@ export default function Home() {
     setItems((prev) => prev.map((item, i) => (i === index ? text : item)));
   };
 
-  const nameOptions = useMemo(
-    () => [
-      'Alice Johnson',
-      'Brandon Lee',
-      'Carla Mendes',
-      'Daniel Wu',
-      'Emily Thompson',
-      'Felix Ortega',
-      'Grace Kim',
-      'Hector Alvarez',
-    ],
-    [],
-  );
-
   useEffect(() => {
     if (items.length < 2) {
       setItems((prev) => (prev.length < 2 ? [...prev, ''] : prev));
@@ -62,51 +48,81 @@ export default function Home() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const writeName = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return;
+    }
+    
+    try {
+      const docId = trimmedName;
+      await addDocument('people', {name: trimmedName}, docId);
+      await addDocument('people', {place: place}, docId);
+    }
+    catch (error) {
+      console.warn('Failed to save name to Firestore:', error);
+    }
+  }
+
+  const writePlace = async () => {
+    const trimmed = place.trim();
+    if (!trimmed) return;
+    if (!name) return;
+
+    try {
+      const docId = name.trim();
+      await addDocument('people', {place: trimmed}, docId);
+    }
+    catch (error) {
+      console.warn('Failed to save place to Firestore:', error);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.date}>{today}</Text>
 
-      <View style={styles.card}>
-        <View style={{marginBottom: 18}}>
-          <Text style={styles.label}>Name</Text>
-          <NameField
+      <View style={styles.card} data-testid="person-card">
+        <View style={styles.infoSection}>
+          <TextInput
             value={name}
-            onChange={setName}
-            options={nameOptions}
-            inputStyle={styles.input}
+            onChangeText={setName}
+            placeholder="Name"
+            style={styles.input}
+            onEndEditing={() => writeName()}
           />
-        </View>
 
-        <View style={{marginBottom: 18}}>
-          <Text style={styles.label}>Place</Text>
           <TextInput
             value={place}
             onChangeText={setPlace}
             placeholder="Where"
             style={styles.input}
+            onEndEditing={() => writePlace()}
           />
         </View>
 
-        <Text style={styles.label}>What did you learn today?</Text>
+        <View style={styles.learntSection}>
+          <Text style={styles.label}>News</Text>
 
-        {items.map((item, index) => (
-          <ListItem
-            ref={(ref) => {
-              swipeableRefs.current[index] = ref;
-            }}
-            key={`item-${index}`}
-            value={item}
-            placeholder={`Item ${index + 1}`}
-            inputStyle={styles.listInput}
-            onChangeText={(text) => {
-              updateItem(text, index);
-              if (index === items.length - 1 && text.trim().length > 0) {
-                addBlankItem();
-              }
-            }}
-            onDelete={() => handleDeleteItem(index)}
-          />
-        ))}
+          {items.map((item, index) => (
+            <ListItem
+              ref={(ref) => {
+                swipeableRefs.current[index] = ref;
+              }}
+              key={`item-${index}`}
+              value={item}
+              placeholder={`Item ${index + 1}`}
+              inputStyle={styles.listInput}
+              onChangeText={(text) => {
+                updateItem(text, index);
+                if (index === items.length - 1 && text.trim().length > 0) {
+                  addBlankItem();
+                }
+              }}
+              onDelete={() => handleDeleteItem(index)}
+            />
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -137,6 +153,15 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: {width: 0, height: 6},
     elevation: 3,
+  },
+  infoSection: {
+    paddingBottom: 14,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  learntSection: {
+    paddingTop: 4,
   },
   label: {
     fontSize: 14,
