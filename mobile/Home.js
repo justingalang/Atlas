@@ -1,87 +1,85 @@
-import {useMemo, useRef, useState, useEffect} from 'react';
+import {useMemo, useRef, useState, useEffect, useCallback} from 'react';
 import {ScrollView, StyleSheet, Text, View, TextInput} from 'react-native';
 import ListItem from './components/ListItem';
 import {addDocument} from './services/firebaseService';
 
-const formatToday = () => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
+const formatToday = () =>
+  new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-  });
-  return formatter.format(new Date());
-};
+  }).format(new Date());
 
 export default function Home() {
   const [name, setName] = useState('');
-  const [items, setItems] = useState(['']);
   const [place, setPlace] = useState('');
+  const [items, setItems] = useState(['']);
   const swipeableRefs = useRef([]);
+  const today = useMemo(formatToday, []);
 
-  const today = useMemo(() => formatToday(), []);
-
-  const addBlankItem = () => {
+  const addBlankItem = useCallback(() => {
     setItems((prev) => [...prev, '']);
-  };
+  }, []);
 
-  const updateItem = (text, index) => {
+  const updateItem = useCallback((text, index) => {
     setItems((prev) => prev.map((item, i) => (i === index ? text : item)));
-  };
+  }, []);
+
+  const ensureAtLeastTwoItems = useCallback(() => {
+    setItems((prev) => (prev.length < 2 ? [...prev, ''] : prev));
+  }, []);
+
+  useEffect(ensureAtLeastTwoItems, [items.length, ensureAtLeastTwoItems]);
+
+  const closeAllSwipeables = useCallback(() => {
+    swipeableRefs.current.forEach((ref) => ref?.close?.());
+  }, []);
+
+  const handleDeleteItem = useCallback(
+    (index) => {
+      closeAllSwipeables();
+      swipeableRefs.current = swipeableRefs.current.filter((_, i) => i !== index);
+      setItems((prev) => prev.filter((_, i) => i !== index));
+    },
+    [closeAllSwipeables],
+  );
+
+  const savePerson = useCallback(async (docId, data) => {
+    try {
+      await addDocument('people', data, docId);
+    } catch (error) {
+      console.warn('Failed to save to Firestore:', error);
+    }
+  }, []);
+
+  const writeName = useCallback(async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    await savePerson(trimmed, {name: trimmed});
+  }, [name, savePerson]);
+
+  const writePlace = useCallback(async () => {
+    const docId = name.trim();
+    const trimmedPlace = place.trim();
+    if (!docId || !trimmedPlace) return;
+    await savePerson(docId, {place: trimmedPlace});
+  }, [name, place, savePerson]);
+
+  const writeItems = useCallback(async () => {
+    const docId = name.trim();
+    const validItems = items.map((item) => item.trim()).filter(Boolean);
+    if (!docId || validItems.length === 0) return;
+    await savePerson(docId, {items: validItems});
+  }, [items, name, savePerson]);
 
   useEffect(() => {
-    if (items.length < 2) {
-      setItems((prev) => (prev.length < 2 ? [...prev, ''] : prev));
-    }
-  }, [items.length]);
-
-  const closeAllSwipeables = () => {
-    swipeableRefs.current.forEach((ref) => {
-      if (ref?.close) {
-        ref.close();
-      }
-    });
-  };
-
-  const handleDeleteItem = (index) => {
-    closeAllSwipeables();
-    swipeableRefs.current = swipeableRefs.current.filter((_, i) => i !== index);
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const writeName = async () => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return;
-    }
-    
-    try {
-      const docId = trimmedName;
-      await addDocument('people', {name: trimmedName}, docId);
-      await addDocument('people', {place: place}, docId);
-    }
-    catch (error) {
-      console.warn('Failed to save name to Firestore:', error);
-    }
-  }
-
-  const writePlace = async () => {
-    const trimmed = place.trim();
-    if (!trimmed) return;
-    if (!name) return;
-
-    try {
-      const docId = name.trim();
-      await addDocument('people', {place: trimmed}, docId);
-    }
-    catch (error) {
-      console.warn('Failed to save place to Firestore:', error);
-    }
-  }
+    const timeoutId = setTimeout(writeItems, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [writeItems]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.date}>{today}</Text>
-
       <View style={styles.card} data-testid="person-card">
         <View style={styles.infoSection}>
           <TextInput
@@ -89,21 +87,18 @@ export default function Home() {
             onChangeText={setName}
             placeholder="Name"
             style={styles.input}
-            onEndEditing={() => writeName()}
+            onEndEditing={writeName}
           />
-
           <TextInput
             value={place}
             onChangeText={setPlace}
             placeholder="Where"
             style={styles.input}
-            onEndEditing={() => writePlace()}
+            onEndEditing={writePlace}
           />
         </View>
-
         <View style={styles.learntSection}>
           <Text style={styles.label}>News</Text>
-
           {items.map((item, index) => (
             <ListItem
               ref={(ref) => {
@@ -115,11 +110,12 @@ export default function Home() {
               inputStyle={styles.listInput}
               onChangeText={(text) => {
                 updateItem(text, index);
-                if (index === items.length - 1 && text.trim().length > 0) {
+                if (index === items.length - 1 && text.trim()) {
                   addBlankItem();
                 }
               }}
               onDelete={() => handleDeleteItem(index)}
+              onEndEditing={writeItems}
             />
           ))}
         </View>
@@ -129,21 +125,9 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f6f7fb',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 48,
-  },
-  date: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 24,
-  },
+  container: {flex: 1, backgroundColor: '#f6f7fb'},
+  content: {paddingHorizontal: 20, paddingTop: 24, paddingBottom: 48},
+  date: {fontSize: 28, fontWeight: '700', color: '#0f172a', marginBottom: 24},
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -160,15 +144,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
-  learntSection: {
-    paddingTop: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
+  learntSection: {paddingTop: 4},
+  label: {fontSize: 14, fontWeight: '600', color: '#1f2937', marginBottom: 8},
   input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
@@ -180,25 +157,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 18,
   },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  addButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#0f7ae5',
-  },
-  addButtonPressed: {
-    opacity: 0.9,
-  },
-  addButtonLabel: {
-    color: '#f8fafc',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  listHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+  addButton: {paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#0f7ae5'},
+  addButtonPressed: {opacity: 0.9},
+  addButtonLabel: {color: '#f8fafc', fontWeight: '600', fontSize: 14},
   listInput: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
