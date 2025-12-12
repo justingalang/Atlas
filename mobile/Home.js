@@ -1,7 +1,19 @@
+/**
+ * Person saving rules:
+ * - When a user enters a name without a last name, memo field is required
+ * - When a user enters a name with a last name, memo field is optional
+ * - Person identifier is stored as "Name-Memo" if no last name, else "Name"
+ * - Entries are saved and retrieved using the unique identifier
+ */
 import {useMemo, useRef, useState, useEffect, useCallback} from 'react';
 import {ScrollView, StyleSheet, Text, View, TextInput} from 'react-native';
 import ListItem from './components/ListItem';
-import {addDocument} from './services/firebaseService';
+import {createPersonHandlers} from './utils/personHandlers';
+import {
+  addDocument,
+  addSubcollectionDocument,
+  getDocumentsByField,
+} from './services/firebaseService';
 
 const formatToday = () =>
   new Intl.DateTimeFormat('en-US', {
@@ -12,6 +24,7 @@ const formatToday = () =>
 
 export default function Home() {
   const [name, setName] = useState('');
+  const [memo, setMemo] = useState('');
   const [place, setPlace] = useState('');
   const [items, setItems] = useState(['']);
   const swipeableRefs = useRef([]);
@@ -44,33 +57,63 @@ export default function Home() {
     [closeAllSwipeables],
   );
 
-  const savePerson = useCallback(async (docId, data) => {
-    try {
-      await addDocument('people', data, docId);
-    } catch (error) {
-      console.warn('Failed to save to Firestore:', error);
-    }
-  }, []);
+  const personHandlers = useMemo(
+    () =>
+      createPersonHandlers({
+        addDocument,
+        addSubcollectionDocument,
+        getDocumentsByField,
+        now: () => new Date().toISOString(),
+      }),
+    [],
+  );
+
+  const buildPersonPayload = useCallback(
+    (data = {}) => {
+      const normalizedName = name.trim();
+      const normalizedMemo = memo.trim();
+      const base = {};
+      if (normalizedName) base.name = normalizedName;
+      if (normalizedMemo) base.memo = normalizedMemo;
+      return {...base, ...data};
+    },
+    [name, memo],
+  );
+
+  const saveEntry = useCallback(
+    async (data) => {
+      const payload = buildPersonPayload(data);
+      if (!payload.name && !payload.memo) {
+        return null;
+      }
+      return personHandlers.saveEntry(payload);
+    },
+    [buildPersonPayload, personHandlers],
+  );
 
   const writeName = useCallback(async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    await savePerson(trimmed, {name: trimmed});
-  }, [name, savePerson]);
+    await saveEntry({name: trimmed});
+  }, [name, saveEntry]);
+
+  const writeMemo = useCallback(async () => {
+    const trimmedMemo = memo.trim();
+    if (!trimmedMemo) return;
+    await saveEntry({memo: trimmedMemo});
+  }, [memo, saveEntry]);
 
   const writePlace = useCallback(async () => {
-    const docId = name.trim();
     const trimmedPlace = place.trim();
-    if (!docId || !trimmedPlace) return;
-    await savePerson(docId, {place: trimmedPlace});
-  }, [name, place, savePerson]);
+    if (!trimmedPlace) return;
+    await saveEntry({place: trimmedPlace});
+  }, [place, saveEntry]);
 
   const writeItems = useCallback(async () => {
-    const docId = name.trim();
     const validItems = items.map((item) => item.trim()).filter(Boolean);
-    if (!docId || validItems.length === 0) return;
-    await savePerson(docId, {items: validItems});
-  }, [items, name, savePerson]);
+    if (validItems.length === 0) return;
+    await saveEntry({items: validItems});
+  }, [items, saveEntry]);
 
   useEffect(() => {
     const timeoutId = setTimeout(writeItems, 1000);
@@ -88,6 +131,13 @@ export default function Home() {
             placeholder="Name"
             style={styles.input}
             onEndEditing={writeName}
+          />
+          <TextInput
+            value={memo}
+            onChangeText={setMemo}
+            placeholder="Add a way to identify this person"
+            style={styles.input}
+            onEndEditing={writeMemo}
           />
           <TextInput
             value={place}
