@@ -115,3 +115,18 @@ export const getDocumentsByField = async (collectionName, field, value) => {
   const documentsQuery = query(collectionRef, where(field, '==', value));
   return getDocs(documentsQuery);
 };
+
+export const queryDocuments = async (collectionName, constraints = []) => {
+  if (!collectionName) {
+    throw new Error('collectionName is required');
+  }
+  if (!db) {
+    throw new Error('Firestore is not initialized');
+  }
+  const collectionRef = collection(db, collectionName);
+  const documentsQuery =
+    Array.isArray(constraints) && constraints.length > 0
+      ? query(collectionRef, ...constraints)
+      : collectionRef;
+  return getDocs(documentsQuery);
+};

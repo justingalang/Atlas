@@ -157,44 +157,8 @@ export default function App() {
       <SafeAreaProvider>
         <SafeAreaView style={styles.appContainer}>
           <StatusBar style="dark" />
-          <View style={styles.navbar}>
-            <Pressable
-              onPress={() => setActiveScreen('home')}
-              style={({pressed}) => [
-                styles.navButton,
-                isHome && styles.navButtonActive,
-                pressed && styles.navButtonPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.navButtonLabel,
-                  isHome && styles.navButtonLabelActive,
-                ]}
-              >
-                Home
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setActiveScreen('test')}
-              style={({pressed}) => [
-                styles.navButton,
-                !isHome && styles.navButtonActive,
-                pressed && styles.navButtonPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.navButtonLabel,
-                  !isHome && styles.navButtonLabelActive,
-                ]}
-              >
-                Test
-              </Text>
-            </Pressable>
-          </View>
           <View style={styles.body}>
-            {isHome ? <Home /> : <TestScreen />}
+             <Home /> 
           </View>
         </SafeAreaView>
       </SafeAreaProvider>
