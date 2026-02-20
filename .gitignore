@@ -1,0 +1,16 @@
+# Node and Expo
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Native outputs
+ios/
+android/
+
+# Environment and secrets
+.env
+.env*.local
+
+# OS
+.DS_Store

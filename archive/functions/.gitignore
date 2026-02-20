@@ -1,0 +1,6 @@
+# Firebase Functions node_modules and config
+node_modules/
+.runtimeconfig.json
+lib/
+npm-debug.log*
+yarn-error.log*
