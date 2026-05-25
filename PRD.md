@@ -41,7 +41,7 @@ A person is someone you've encountered. A person has:
 
 - **First name** (required)
 - **Last name** (optional)
-- **Nickname** (optional)
+- **Memo** (optional — short label to help disambiguate, e.g., "Professor", "Blue eyes")
 - **Where you first met** (derived from the first encounter's location)
 - **Encounters** (a timeline of all logged interactions)
 
@@ -50,10 +50,10 @@ A person is someone you've encountered. A person has:
 To handle duplicates, display names are resolved with the following cascade:
 
 1. **First Last** — if unique
-2. **First Last (nickname)** — if duplicate first + last exists and nickname is available
-3. **First Last (original encounter location)** — if duplicate first + last exists and no nickname
+2. **First Last (memo)** — if duplicate first + last exists and memo is available
+3. **First Last (original encounter location)** — if duplicate first + last exists and no memo
 4. For first-name-only entries, the same cascade applies:
-   - **First (nickname)**
+   - **First (memo)**
    - **First (original encounter location)**
 
 ### Encounter
@@ -91,7 +91,6 @@ Users can manually correct or recategorize extracted facts.
 | **People** | Alphabetical list of all people, searchable by name |
 | **+ (Add Encounter)** | Opens the encounter input form, defaults to today |
 | **Connections** | Surfaced relationships between people *(post-MVP)* |
-| **Settings** | Data export, preferences |
 
 ### App Open Flow
 
@@ -151,6 +150,18 @@ Users can manually correct or recategorize extracted facts.
 
 ---
 
+## Sync Status Indicator *(Post-MVP)*
+
+A small color indicator showing whether the current view's data has been persisted to Firestore:
+
+| State | Color | Meaning |
+|-------|-------|---------|
+| Out of sync | Yellow | Local changes not yet written to Firestore |
+| Synced | Green | Local data matches Firestore |
+| Error | Red | Write to Firestore failed |
+
+---
+
 ## Notifications *(Post-MVP)*
 
 - **Push notifications** for user-created reminders tied to encounters
@@ -177,7 +188,6 @@ Users can manually correct or recategorize extracted facts.
 - Home/Timeline view with calendar access
 - People tab with alphabetical/date sort and name search
 - Offline support with Firestore sync
-- Settings (export, preferences)
 
 ### Out of Scope (Post-MVP)
 
@@ -185,6 +195,7 @@ Users can manually correct or recategorize extracted facts.
 - Push notification reminders tied to encounters
 - API access for external AI agent consumption
 - Attribute-based search (across aggregated facts)
+- Sync status indicator (yellow/green/red Firestore sync state)
 - Connections / Discovery tab (surfacing relationships between people)
 - On-device AI processing
 - Multi-user / sharing
