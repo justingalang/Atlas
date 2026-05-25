@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Atlas is a single-user MVP with no auth. Access is gated by the obscurity
+// of the bundle ID + API key, which is acceptable for personal use. When auth
+// lands post-MVP, tighten these to `request.auth.uid == ownerUid`.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /people/{personId} {
+      allow read, write: if true;
+    }
+    match /encounters/{encounterId} {
+      allow read, write: if true;
+    }
+  }
+}

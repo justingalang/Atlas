@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "encounters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "personId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
