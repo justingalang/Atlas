@@ -10,16 +10,18 @@ import { getEncounterFacts } from "../utils/encounterContent";
 
 interface Props {
   onAddEncounter: (date: string) => void;
+  refreshSignal?: number;
 }
 
-export default function CalendarView({ onAddEncounter }: Props) {
+export default function CalendarView({ onAddEncounter, refreshSignal }: Props) {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedDate, setSelectedDate] = useState<string>(formatToday());
   const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: boolean }>>({});
 
-  // Load dates that have encounters (from recent history)
+  // Load dates that have encounters (from recent history).
+  // Refetches whenever refreshSignal bumps (e.g. after saving an encounter).
   useEffect(() => {
     getRecentEncounters(200).then((data) => {
       const dates: Record<string, { marked: boolean }> = {};
@@ -30,13 +32,14 @@ export default function CalendarView({ onAddEncounter }: Props) {
       }
       setMarkedDates(dates);
     });
-  }, []);
+  }, [refreshSignal]);
 
-  // Load encounters for selected date
+  // Load encounters for the selected date. Also refetches on refreshSignal so
+  // newly-saved encounters appear in the day-specific list immediately.
   useEffect(() => {
     const [y, m, d] = selectedDate.split("-").map(Number);
     getEncountersByDate(new Date(y, m - 1, d)).then(setEncounters);
-  }, [selectedDate]);
+  }, [selectedDate, refreshSignal]);
 
   const handleDayPress = useCallback((day: DateData) => {
     setSelectedDate(day.dateString);

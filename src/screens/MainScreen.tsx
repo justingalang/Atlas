@@ -113,7 +113,10 @@ export default function MainScreen() {
         style={styles.body}
       >
         <View style={{ width }}>
-          <CalendarView onAddEncounter={handleAddEncounter} />
+          <CalendarView
+            onAddEncounter={handleAddEncounter}
+            refreshSignal={refreshSignal}
+          />
         </View>
         <View style={{ width }}>
           <TimelinePane
