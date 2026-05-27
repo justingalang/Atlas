@@ -21,11 +21,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackScreenProps, RootStackParamList } from "../navigation/types";
-import type { Person, Encounter } from "../types";
+import type { Person, Encounter, Reminder } from "../types";
 import {
   getPersonById,
   getEncountersForPerson,
   updateEncounter,
+  getRemindersForPerson,
 } from "../services";
 import { getEncounterFacts } from "../utils/encounterContent";
 
@@ -49,7 +50,8 @@ export default function PersonProfileScreen({
 
   const [person, setPerson] = useState<Person | null>(null);
   const [encounters, setEncounters] = useState<Encounter[]>([]);
-  // Tab order: 0 = Core (favorites), 1 = Facts (default), 2 = Encounters.
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  // Tab order: 0 = Core, 1 = Facts (default), 2 = Encounters, 3 = Reminders.
   const [tabIndex, setTabIndex] = useState(1);
 
   const goToTab = useCallback(
@@ -71,12 +73,14 @@ export default function PersonProfileScreen({
 
   const load = useCallback(async () => {
     try {
-      const [p, enc] = await Promise.all([
+      const [p, enc, rem] = await Promise.all([
         getPersonById(personId),
         getEncountersForPerson(personId),
+        getRemindersForPerson(personId),
       ]);
       setPerson(p);
       setEncounters(enc);
+      setReminders(rem);
     } catch (error) {
       console.error("[PersonProfile] load failed:", error);
     }
@@ -204,6 +208,13 @@ export default function PersonProfileScreen({
           active={tabIndex === 2}
           onPress={() => goToTab(2)}
         />
+        <TabButton
+          label={`Reminders${
+            reminders.length ? ` · ${reminders.length}` : ""
+          }`}
+          active={tabIndex === 3}
+          onPress={() => goToTab(3)}
+        />
       </View>
 
       <ScrollView
@@ -305,6 +316,43 @@ export default function PersonProfileScreen({
             }
             ListEmptyComponent={
               <Text style={styles.emptyText}>No encounters recorded</Text>
+            }
+          />
+        </View>
+
+        <View style={{ width, height: "100%" }}>
+          <FlatList
+            data={reminders}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={
+              <TouchableOpacity
+                style={styles.addReminderButton}
+                onPress={() =>
+                  navigation.navigate("EditReminder", { personId })
+                }
+              >
+                <Text style={styles.addReminderButtonText}>+ Add reminder</Text>
+              </TouchableOpacity>
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.reminderRow}
+                onPress={() =>
+                  navigation.navigate("EditReminder", {
+                    personId,
+                    reminderId: item.id,
+                  })
+                }
+              >
+                <Text style={styles.reminderMessage}>{item.message}</Text>
+                <Text style={styles.reminderDate}>
+                  {formatTimestamp(item.date)}
+                </Text>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No reminders yet</Text>
             }
           />
         </View>
@@ -544,4 +592,25 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   fabText: { color: "#fff", fontSize: 28, lineHeight: 32 },
+  addReminderButton: {
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 8,
+    backgroundColor: "#eef3fa",
+    borderWidth: 1,
+    borderColor: "#cdd9ec",
+    marginBottom: 12,
+  },
+  addReminderButtonText: {
+    color: "#007AFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  reminderRow: {
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#eee",
+  },
+  reminderMessage: { fontSize: 15, color: "#1c1c1e", lineHeight: 21 },
+  reminderDate: { fontSize: 12, color: "#8e8e93", marginTop: 4 },
 });

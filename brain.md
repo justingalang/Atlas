@@ -114,7 +114,25 @@ Atlas/
 
 Project is feature-complete in its current shape. Did final pass: deleted dead `sample.test.ts`, deleted `docs/` design HTML files, refreshed `brain.md` + `CLAUDE.md` + `PRD.md` to match reality, typed `useNavigation` in `CalendarView`. Splitting the 50-file initial-real-commit into infra commit + app commit for cleaner history.
 
+### 2026-05-27 — Reminders UI (notifications deferred)
+
+Built the Reminders tab as a 4th tab on the profile (Core | Facts | Encounters | Reminders) plus an EditReminder modal screen. New `reminders` Firestore collection + composite index on (personId, date) deployed to `pogi-atlas`. Reminders cascade-delete when a person is deleted.
+
+**Crucially: no OS notifications wired up yet.** Reminders are just dated Firestore records right now — the phone won't fire anything. To turn them into real alerts, see "Deferred: notifications" below.
+
+### Deferred: notifications
+
+When ready, wire `expo-notifications` into the existing reminder data model:
+- Install `expo-notifications` (native module → requires dev client rebuild via EAS Build)
+- Add to `app.config.ts` plugins array
+- Create `src/services/notificationService.ts` with `requestPermission`, `scheduleNotification`, `cancelNotification`
+- In `EditReminderScreen.handleSave`: after `createReminder`/`updateReminder`, call `scheduleNotification` with the reminder's date + message. Persist the returned OS notification ID on the Reminder doc (add `notificationId?: string` field to `Reminder` type and service)
+- In `EditReminderScreen.handleDelete` and `EditPersonScreen.handleDelete` cascade: call `cancelNotification(notificationId)` before/after Firestore deletes
+- Birthday reminders (separate from user reminders): on person create/update, if `birthday` is set, schedule a recurring annual notification 3 days before. Store the notification ID on the person doc OR re-schedule from scratch each load.
+- First-launch permission flow: on app start, check status; if `undetermined`, prompt before the user tries to use reminders
+- Test on physical device — simulator notification support is partial
+
 **Next likely directions:**
 - Tighten Firestore rules once auth lands
-- Address `firstMetLocation` editability now that Edit Person exists (already in Edit form — done implicitly)
-- Post-MVP: AI fact extraction, connections, push reminders, multi-fact search
+- Notifications (see above)
+- Post-MVP: AI fact extraction, connections, multi-fact search

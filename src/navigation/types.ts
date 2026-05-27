@@ -6,6 +6,7 @@ export type RootStackParamList = {
   PersonProfile: { personId: string };
   EditPerson: { personId: string };
   EditEncounter: { encounterId: string };
+  EditReminder: { personId: string; reminderId?: string };
   EncounterForm:
     | { prefillDate?: string; prefillPersonId?: string }
     | undefined;

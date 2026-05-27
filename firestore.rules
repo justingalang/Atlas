@@ -11,5 +11,8 @@ service cloud.firestore {
     match /encounters/{encounterId} {
       allow read, write: if true;
     }
+    match /reminders/{reminderId} {
+      allow read, write: if true;
+    }
   }
 }

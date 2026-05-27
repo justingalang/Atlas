@@ -18,3 +18,12 @@ export {
   getAllEncounters,
   deleteEncountersForPerson,
 } from "./encounterService";
+
+export {
+  createReminder,
+  getReminderById,
+  getRemindersForPerson,
+  updateReminder,
+  deleteReminder,
+  deleteRemindersForPerson,
+} from "./reminderService";

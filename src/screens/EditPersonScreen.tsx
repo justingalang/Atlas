@@ -19,6 +19,7 @@ import {
   updatePerson,
   deletePerson,
   deleteEncountersForPerson,
+  deleteRemindersForPerson,
 } from "../services";
 
 export default function EditPersonScreen({
@@ -109,7 +110,10 @@ export default function EditPersonScreen({
           onPress: async () => {
             setDeleting(true);
             try {
-              await deleteEncountersForPerson(personId);
+              await Promise.all([
+                deleteEncountersForPerson(personId),
+                deleteRemindersForPerson(personId),
+              ]);
               await deletePerson(personId);
               // Pop the modal AND the now-stale profile screen behind it.
               navigation.pop(2);
