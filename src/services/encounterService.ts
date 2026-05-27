@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   addDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -40,6 +41,12 @@ export async function createEncounter(
 
   const docRef = await addDoc(collection(db, COLLECTION), payload);
   return { id: docRef.id, ...payload } as Encounter;
+}
+
+/** Get a single encounter by ID. */
+export async function getEncounterById(id: string): Promise<Encounter | null> {
+  const snapshot = await getDoc(doc(db, COLLECTION, id));
+  return toEncounter(snapshot);
 }
 
 /** Update an encounter's fields. */

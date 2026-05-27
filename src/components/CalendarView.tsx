@@ -92,7 +92,8 @@ export default function CalendarView({ onAddEncounter, refreshSignal }: Props) {
               ) : null}
               {factList.map((f, i) => (
                 <Text key={i} style={styles.fact} numberOfLines={1}>
-                  • {f}
+                  {f.favorite ? "★ " : "• "}
+                  {f.text}
                 </Text>
               ))}
             </TouchableOpacity>

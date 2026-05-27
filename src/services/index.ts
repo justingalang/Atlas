@@ -11,6 +11,7 @@ export {
 export {
   createEncounter,
   updateEncounter,
+  getEncounterById,
   getEncountersForPerson,
   getEncountersByDate,
   getRecentEncounters,

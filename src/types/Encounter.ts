@@ -1,5 +1,10 @@
 import { Timestamp } from "firebase/firestore";
 
+export interface Fact {
+  text: string;
+  favorite?: boolean;
+}
+
 export interface Encounter {
   id: string;
   personId: string;
@@ -8,8 +13,9 @@ export interface Encounter {
   /** Date of the encounter (no time component). Stored as a Firestore Timestamp. */
   date: Timestamp;
   location: string;
-  /** Array of short facts captured during the encounter. */
-  facts: string[];
+  /** Short facts captured during the encounter. New encounters write Fact[];
+   * legacy encounters may have string[] which `getEncounterFacts` normalizes. */
+  facts: Fact[];
   /** Legacy free-form notes from older encounters. New encounters write `facts` instead. */
   notes?: string;
   createdAt: Timestamp;

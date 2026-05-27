@@ -1,16 +1,21 @@
-import type { Encounter } from "../types";
+import type { Encounter, Fact } from "../types";
 
 /**
- * Returns the encounter's facts, falling back to the legacy `notes` field
- * (split into a pseudo-list by line) for encounters saved before the
- * facts array was introduced.
+ * Returns the encounter's facts as a normalized `Fact[]`. Handles three cases:
+ *
+ *  1. New shape — `facts` is already `Fact[]` with optional `favorite` flags.
+ *  2. Legacy shape — `facts` is `string[]`; each entry becomes `{ text }`.
+ *  3. Pre-facts shape — encounter has only a `notes` string; treated as one fact.
  */
-export function getEncounterFacts(encounter: Encounter): string[] {
-  if (encounter.facts && encounter.facts.length > 0) {
-    return encounter.facts;
+export function getEncounterFacts(encounter: Encounter): Fact[] {
+  const raw = encounter.facts as unknown as (string | Fact)[] | undefined;
+  if (raw && raw.length > 0) {
+    return raw.map((f) =>
+      typeof f === "string" ? { text: f } : f,
+    );
   }
   if (encounter.notes && encounter.notes.trim()) {
-    return [encounter.notes.trim()];
+    return [{ text: encounter.notes.trim() }];
   }
   return [];
 }

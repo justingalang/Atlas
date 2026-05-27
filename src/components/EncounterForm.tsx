@@ -11,10 +11,11 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Timestamp } from "firebase/firestore";
-import type { Person } from "../types";
+import type { Person, Fact } from "../types";
 import {
   createPerson,
   createEncounter,
+  updateEncounter,
   getPersonById,
   findCanonicalPersonByName,
   findPeopleByName,
@@ -22,26 +23,50 @@ import {
 import { parseName } from "../utils/nameParser";
 import PersonAutocomplete from "./PersonAutocomplete";
 
+export interface SavedEncounterData {
+  encounterId: string;
+  personName: string;
+  date: Date;
+  location: string;
+  facts: Fact[];
+}
+
 interface Props {
   prefillDate?: string;
   prefillWhere?: string;
   prefillPersonId?: string;
-  onSaved: (saved: { date: Date; location: string }) => void;
+  /** When set, the form is in edit mode for this encounter. Who/Nickname
+   * are locked, and Save calls updateEncounter instead of createEncounter. */
+  editEncounterId?: string;
+  /** Full prefill set used when re-entering edit mode from a saved card. */
+  prefillWho?: string;
+  prefillNickname?: string;
+  prefillFacts?: Fact[];
+  onSaved: (saved: SavedEncounterData) => void;
 }
 
 export default function EncounterForm({
   prefillDate,
   prefillWhere,
   prefillPersonId,
+  editEncounterId,
+  prefillWho,
+  prefillNickname,
+  prefillFacts,
   onSaved,
 }: Props) {
   const initialDate = prefillDate ? parseLocalDate(prefillDate) : new Date();
+  const isEditing = !!editEncounterId;
 
-  const [who, setWho] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [who, setWho] = useState(prefillWho ?? "");
+  const [nickname, setNickname] = useState(prefillNickname ?? "");
   const [date, setDate] = useState<Date>(initialDate);
   const [where, setWhere] = useState(prefillWhere ?? "");
-  const [facts, setFacts] = useState<string[]>([""]);
+  const [facts, setFacts] = useState<Fact[]>(
+    prefillFacts && prefillFacts.length > 0
+      ? [...prefillFacts, { text: "" }]
+      : [{ text: "" }],
+  );
   const [saving, setSaving] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
@@ -80,6 +105,7 @@ export default function EncounterForm({
   // Debounced lookup as the user types Who: populate nickname from a canonical
   // match so they can either keep it (same person) or change it (different person).
   useEffect(() => {
+    if (isEditing) return; // edit mode locks the person
     if (selectedPersonRef.current) return; // explicit pick overrides
     const trimmed = who.trim();
     if (!trimmed) {
@@ -115,21 +141,20 @@ export default function EncounterForm({
   const updateFact = useCallback((index: number, value: string) => {
     setFacts((prev) => {
       const next = [...prev];
-      next[index] = value;
+      next[index] = { ...next[index], text: value };
       return next;
     });
   }, []);
 
   const handleFactSubmit = useCallback((index: number) => {
     setFacts((prev) => {
-      const current = prev[index]?.trim() ?? "";
+      const current = prev[index]?.text.trim() ?? "";
       if (!current) return prev;
       if (index < prev.length - 1) {
-        // Jump to the next existing row.
         setTimeout(() => factRefs.current[index + 1]?.focus(), 0);
         return prev;
       }
-      const next = [...prev, ""];
+      const next = [...prev, { text: "" }];
       setTimeout(() => factRefs.current[next.length - 1]?.focus(), 0);
       return next;
     });
@@ -137,7 +162,7 @@ export default function EncounterForm({
 
   const removeFact = useCallback((index: number) => {
     setFacts((prev) => {
-      if (prev.length === 1) return [""];
+      if (prev.length === 1) return [{ text: "" }];
       return prev.filter((_, i) => i !== index);
     });
   }, []);
@@ -152,8 +177,30 @@ export default function EncounterForm({
 
     setSaving(true);
     try {
-      let person: Person;
+      const cleanFacts: Fact[] = facts
+        .map((f) => ({ ...f, text: f.text.trim() }))
+        .filter((f) => f.text.length > 0);
+      const savedLocation = where.trim();
 
+      if (editEncounterId) {
+        // Edit mode: update only the editable fields (date, location, facts).
+        // Who/Nickname are locked, so we keep the existing personId/personName.
+        await updateEncounter(editEncounterId, {
+          date: Timestamp.fromDate(date),
+          location: savedLocation,
+          facts: cleanFacts,
+        });
+        onSaved({
+          encounterId: editEncounterId,
+          personName: trimmedWho,
+          date,
+          location: savedLocation,
+          facts: cleanFacts,
+        });
+        return;
+      }
+
+      let person: Person;
       if (selectedPersonRef.current) {
         // Explicit pick from 🔍 modal wins.
         person = selectedPersonRef.current;
@@ -175,9 +222,7 @@ export default function EncounterForm({
         });
       }
 
-      const cleanFacts = facts.map((f) => f.trim()).filter(Boolean);
-      const savedLocation = where.trim();
-      await createEncounter({
+      const created = await createEncounter({
         personId: person.id,
         personName: trimmedWho,
         date: Timestamp.fromDate(date),
@@ -185,7 +230,13 @@ export default function EncounterForm({
         facts: cleanFacts,
       });
 
-      onSaved({ date, location: savedLocation });
+      onSaved({
+        encounterId: created.id,
+        personName: trimmedWho,
+        date,
+        location: savedLocation,
+        facts: cleanFacts,
+      });
     } catch (error) {
       console.error("[EncounterForm] save failed:", error);
       const message = error instanceof Error ? error.message : String(error);
@@ -193,48 +244,62 @@ export default function EncounterForm({
     } finally {
       setSaving(false);
     }
-  }, [who, nickname, date, where, facts, onSaved]);
+  }, [who, nickname, date, where, facts, editEncounterId, onSaved]);
 
   return (
     <View style={styles.container}>
       <View style={styles.field}>
         <Text style={styles.label}>Who</Text>
-        <PersonAutocomplete
-          value={who}
-          onChangeText={(text) => {
-            setWho(text);
-            selectedPersonRef.current = null;
-          }}
-          onSelectPerson={(person) => {
-            selectedPersonRef.current = person;
-            setNickname(person.nickname ?? "");
-            matchedRef.current = {
-              person,
-              baselineNickname: person.nickname ?? "",
-            };
-          }}
-        />
+        {isEditing ? (
+          <View style={[styles.input, styles.inputLocked]}>
+            <Text style={styles.lockedText}>{who}</Text>
+          </View>
+        ) : (
+          <PersonAutocomplete
+            value={who}
+            onChangeText={(text) => {
+              setWho(text);
+              selectedPersonRef.current = null;
+            }}
+            onSelectPerson={(person) => {
+              selectedPersonRef.current = person;
+              setNickname(person.nickname ?? "");
+              matchedRef.current = {
+                person,
+                baselineNickname: person.nickname ?? "",
+              };
+            }}
+          />
+        )}
       </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Nickname</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={
-            matchedRef.current
-              ? "Edit to mark as a different person"
-              : "Optional"
-          }
-          value={nickname}
-          onChangeText={setNickname}
-          autoCapitalize="words"
-        />
-        {matchCount > 1 ? (
-          <Text style={styles.hint}>
-            {matchCount} people with this name — use 🔍 to pick the right one
-          </Text>
-        ) : null}
-      </View>
+      {(isEditing ? nickname.length > 0 : true) && (
+        <View style={styles.field}>
+          <Text style={styles.label}>Nickname</Text>
+          {isEditing ? (
+            <View style={[styles.input, styles.inputLocked]}>
+              <Text style={styles.lockedText}>{nickname}</Text>
+            </View>
+          ) : (
+            <TextInput
+              style={styles.input}
+              placeholder={
+                matchedRef.current
+                  ? "Edit to mark as a different person"
+                  : "Optional"
+              }
+              value={nickname}
+              onChangeText={setNickname}
+              autoCapitalize="words"
+            />
+          )}
+          {matchCount > 1 && !isEditing ? (
+            <Text style={styles.hint}>
+              {matchCount} people with this name — use 🔍 to pick the right one
+            </Text>
+          ) : null}
+        </View>
+      )}
 
       <View style={styles.field}>
         <Text style={styles.label}>When</Text>
@@ -296,7 +361,7 @@ export default function EncounterForm({
               }}
               style={[styles.input, styles.factInput]}
               placeholder={index === 0 ? "Add a fact" : "Add another fact"}
-              value={fact}
+              value={fact.text}
               onChangeText={(text) => updateFact(index, text)}
               onSubmitEditing={() => handleFactSubmit(index)}
               returnKeyType="next"
@@ -323,7 +388,11 @@ export default function EncounterForm({
         disabled={saving}
       >
         <Text style={styles.buttonText}>
-          {saving ? "Saving..." : "Save Encounter"}
+          {saving
+            ? "Saving..."
+            : isEditing
+              ? "Update Encounter"
+              : "Save Encounter"}
         </Text>
       </TouchableOpacity>
 
@@ -370,6 +439,14 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     color: "#1c1c1e",
+  },
+  inputLocked: {
+    backgroundColor: "#f0f0f3",
+    justifyContent: "center",
+  },
+  lockedText: {
+    fontSize: 16,
+    color: "#555",
   },
   hint: {
     fontSize: 12,

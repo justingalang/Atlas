@@ -35,6 +35,7 @@ export default function EditPersonScreen({
   const [lastName, setLastName] = useState("");
   const [nickname, setNickname] = useState("");
   const [firstMetLocation, setFirstMetLocation] = useState("");
+  const [profession, setProfession] = useState("");
   const [birthday, setBirthday] = useState<Date | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -49,6 +50,7 @@ export default function EditPersonScreen({
       setLastName(person.lastName ?? "");
       setNickname(person.nickname ?? "");
       setFirstMetLocation(person.firstMetLocation ?? "");
+      setProfession(person.profession ?? "");
       setBirthday(person.birthday ? parseLocalDate(person.birthday) : null);
       setLoading(false);
     });
@@ -70,6 +72,7 @@ export default function EditPersonScreen({
         lastName: lastName.trim() || undefined,
         nickname: nickname.trim() || undefined,
         firstMetLocation: firstMetLocation.trim() || undefined,
+        profession: profession.trim() || undefined,
         birthday: birthday ? formatDateKey(birthday) : undefined,
       });
       navigation.goBack();
@@ -85,6 +88,7 @@ export default function EditPersonScreen({
     lastName,
     nickname,
     firstMetLocation,
+    profession,
     birthday,
     personId,
     navigation,
@@ -183,6 +187,16 @@ export default function EditPersonScreen({
           style={styles.input}
           value={firstMetLocation}
           onChangeText={setFirstMetLocation}
+          autoCapitalize="sentences"
+          placeholder="Optional"
+        />
+      </Field>
+
+      <Field label="Profession">
+        <TextInput
+          style={styles.input}
+          value={profession}
+          onChangeText={setProfession}
           autoCapitalize="sentences"
           placeholder="Optional"
         />

@@ -8,6 +8,7 @@ export interface Person {
   firstMetLocation?: string;
   /** ISO date string YYYY-MM-DD (no time component). */
   birthday?: string;
+  profession?: string;
   normalizedName: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -15,4 +16,6 @@ export interface Person {
 
 /** Fields required to create a new Person (id and timestamps are generated). */
 export type PersonCreate = Pick<Person, "firstName"> &
-  Partial<Pick<Person, "lastName" | "nickname" | "firstMetLocation" | "birthday">>;
+  Partial<
+    Pick<Person, "lastName" | "nickname" | "firstMetLocation" | "birthday" | "profession">
+  >;

@@ -25,6 +25,7 @@ import type { Person, Encounter } from "../types";
 import {
   getPersonById,
   getEncountersForPerson,
+  updateEncounter,
 } from "../services";
 import { getEncounterFacts } from "../utils/encounterContent";
 
@@ -33,6 +34,8 @@ interface FactRow {
   date: { toDate?: () => Date };
   location: string;
   encounterId: string;
+  factIndex: number;
+  favorite: boolean;
 }
 
 export default function PersonProfileScreen({
@@ -46,8 +49,8 @@ export default function PersonProfileScreen({
 
   const [person, setPerson] = useState<Person | null>(null);
   const [encounters, setEncounters] = useState<Encounter[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [tabIndex, setTabIndex] = useState(0);
+  // Tab order: 0 = Core (favorites), 1 = Facts (default), 2 = Encounters.
+  const [tabIndex, setTabIndex] = useState(1);
 
   const goToTab = useCallback(
     (index: number) => {
@@ -108,17 +111,43 @@ export default function PersonProfileScreen({
   const factRows = useMemo<FactRow[]>(() => {
     const rows: FactRow[] = [];
     for (const enc of encounters) {
-      for (const f of getEncounterFacts(enc)) {
+      const facts = getEncounterFacts(enc);
+      facts.forEach((f, i) => {
         rows.push({
-          text: f,
+          text: f.text,
           date: enc.date,
           location: enc.location,
           encounterId: enc.id,
+          factIndex: i,
+          favorite: !!f.favorite,
         });
-      }
+      });
     }
     return rows;
   }, [encounters]);
+
+  const favoriteRows = useMemo<FactRow[]>(
+    () => factRows.filter((r) => r.favorite),
+    [factRows],
+  );
+
+  const toggleFavorite = useCallback(
+    async (encounterId: string, factIndex: number) => {
+      const enc = encounters.find((e) => e.id === encounterId);
+      if (!enc) return;
+      const facts = getEncounterFacts(enc);
+      const nextFacts = facts.map((f, i) =>
+        i === factIndex ? { ...f, favorite: !f.favorite } : f,
+      );
+      try {
+        await updateEncounter(encounterId, { facts: nextFacts });
+        await load();
+      } catch (error) {
+        console.error("[PersonProfile] toggle favorite failed:", error);
+      }
+    },
+    [encounters, load],
+  );
 
   if (!person) {
     return (
@@ -134,6 +163,9 @@ export default function PersonProfileScreen({
         <Text style={styles.name}>{fullName(person)}</Text>
         {person.nickname ? (
           <Text style={styles.nickname}>{person.nickname}</Text>
+        ) : null}
+        {person.profession ? (
+          <Text style={styles.metAt}>{person.profession}</Text>
         ) : null}
         {person.firstMetLocation ? (
           <Text style={styles.metAt}>
@@ -156,16 +188,21 @@ export default function PersonProfileScreen({
 
       <View style={styles.tabBar}>
         <TabButton
-          label={`Facts${factRows.length ? ` · ${factRows.length}` : ""}`}
+          label={`Core${favoriteRows.length ? ` · ${favoriteRows.length}` : ""}`}
           active={tabIndex === 0}
           onPress={() => goToTab(0)}
+        />
+        <TabButton
+          label={`Facts${factRows.length ? ` · ${factRows.length}` : ""}`}
+          active={tabIndex === 1}
+          onPress={() => goToTab(1)}
         />
         <TabButton
           label={`Encounters${
             encounters.length ? ` · ${encounters.length}` : ""
           }`}
-          active={tabIndex === 1}
-          onPress={() => goToTab(1)}
+          active={tabIndex === 2}
+          onPress={() => goToTab(2)}
         />
       </View>
 
@@ -175,20 +212,44 @@ export default function PersonProfileScreen({
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScrollEnd}
+        // Start on Facts (page index 1) — middle pane is the default view.
+        contentOffset={{ x: width, y: 0 }}
         style={styles.pager}
       >
+        <View style={{ width, height: "100%" }}>
+          <FlatList
+            data={favoriteRows}
+            keyExtractor={(_, i) => `core-${i}`}
+            renderItem={({ item }) => (
+              <FactListItem
+                row={item}
+                onLongPress={() =>
+                  toggleFavorite(item.encounterId, item.factIndex)
+                }
+              />
+            )}
+            contentContainerStyle={
+              favoriteRows.length === 0 ? styles.emptyContainer : styles.list
+            }
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                No core facts yet — long-press a fact to mark it core
+              </Text>
+            }
+          />
+        </View>
+
         <View style={{ width, height: "100%" }}>
           <FlatList
             data={factRows}
             keyExtractor={(_, i) => `fact-${i}`}
             renderItem={({ item }) => (
-              <View style={styles.factRow}>
-                <Text style={styles.factText}>{item.text}</Text>
-                <Text style={styles.factMeta}>
-                  {formatTimestamp(item.date)}
-                  {item.location ? ` · ${item.location}` : ""}
-                </Text>
-              </View>
+              <FactListItem
+                row={item}
+                onLongPress={() =>
+                  toggleFavorite(item.encounterId, item.factIndex)
+                }
+              />
             )}
             contentContainerStyle={
               factRows.length === 0 ? styles.emptyContainer : styles.list
@@ -204,15 +265,16 @@ export default function PersonProfileScreen({
             data={encounters}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => {
-              const isExpanded = expandedId === item.id;
               const factList = getEncounterFacts(item);
-              const visibleFacts = isExpanded
-                ? factList
-                : factList.slice(0, 2);
+              const visibleFacts = factList.slice(0, 2);
               return (
                 <TouchableOpacity
                   style={styles.encounterCard}
-                  onPress={() => setExpandedId(isExpanded ? null : item.id)}
+                  onPress={() =>
+                    navigation.navigate("EditEncounter", {
+                      encounterId: item.id,
+                    })
+                  }
                 >
                   <View style={styles.encounterHeader}>
                     <Text style={styles.encounterDate}>
@@ -226,10 +288,11 @@ export default function PersonProfileScreen({
                   </View>
                   {visibleFacts.map((f, i) => (
                     <Text key={i} style={styles.encounterFact}>
-                      • {f}
+                      {f.favorite ? "★ " : "• "}
+                      {f.text}
                     </Text>
                   ))}
-                  {!isExpanded && factList.length > visibleFacts.length ? (
+                  {factList.length > visibleFacts.length ? (
                     <Text style={styles.encounterMore}>
                       +{factList.length - visibleFacts.length} more
                     </Text>
@@ -257,6 +320,34 @@ export default function PersonProfileScreen({
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
     </View>
+  );
+}
+
+function FactListItem({
+  row,
+  onLongPress,
+}: {
+  row: FactRow;
+  onLongPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.factRow}
+      onLongPress={onLongPress}
+      delayLongPress={300}
+      activeOpacity={0.65}
+    >
+      <View style={styles.factHeader}>
+        <Text style={styles.factText}>{row.text}</Text>
+        {row.favorite ? (
+          <Ionicons name="star" size={16} color="#FFB300" />
+        ) : null}
+      </View>
+      <Text style={styles.factMeta}>
+        {formatTimestamp(row.date)}
+        {row.location ? ` · ${row.location}` : ""}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -409,7 +500,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#eee",
   },
-  factText: { fontSize: 15, color: "#1c1c1e", lineHeight: 21 },
+  factHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  factText: { fontSize: 15, color: "#1c1c1e", lineHeight: 21, flex: 1 },
   factMeta: { fontSize: 12, color: "#8e8e93", marginTop: 4 },
   encounterCard: {
     backgroundColor: "#f9f9f9",

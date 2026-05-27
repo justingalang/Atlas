@@ -5,6 +5,7 @@ import EncounterFormScreen from "../screens/EncounterFormScreen";
 import PersonProfileScreen from "../screens/PersonProfileScreen";
 import PeopleListScreen from "../screens/PeopleListScreen";
 import EditPersonScreen from "../screens/EditPersonScreen";
+import EditEncounterScreen from "../screens/EditEncounterScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -30,6 +31,11 @@ export default function RootNavigator() {
         name="EditPerson"
         component={EditPersonScreen}
         options={{ title: "Edit", presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="EditEncounter"
+        component={EditEncounterScreen}
+        options={{ title: "Edit Encounter", presentation: "modal" }}
       />
       <Stack.Screen
         name="EncounterForm"

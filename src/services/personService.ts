@@ -36,6 +36,7 @@ export async function createPerson(data: PersonCreate): Promise<Person> {
     nickname: data.nickname ?? null,
     firstMetLocation: data.firstMetLocation ?? null,
     birthday: data.birthday ?? null,
+    profession: data.profession ?? null,
     normalizedName: normalized,
     createdAt: now,
     updatedAt: now,
@@ -86,7 +87,10 @@ export async function getAllPeople(): Promise<Person[]> {
 export async function updatePerson(
   id: string,
   data: Partial<
-    Pick<Person, "firstName" | "lastName" | "nickname" | "firstMetLocation" | "birthday">
+    Pick<
+      Person,
+      "firstName" | "lastName" | "nickname" | "firstMetLocation" | "birthday" | "profession"
+    >
   >,
 ): Promise<void> {
   const updates: Record<string, unknown> = { updatedAt: Timestamp.now() };
