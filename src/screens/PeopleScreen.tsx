@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -14,7 +14,7 @@ import { normalizeName } from "../utils/normalizeName";
 type SortMode = "alpha" | "recent";
 
 interface Props {
-  onSelectPerson: (personId: string) => void;
+  onSelectPerson: (personId: string, peopleIds?: string[]) => void;
   refreshSignal?: number;
 }
 
@@ -25,6 +25,9 @@ export default function PeopleScreen({ onSelectPerson, refreshSignal }: Props) {
   );
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("alpha");
+  // Holds the current sort order so taps in renderItem pass the same list
+  // (read inside onPress, not closed over at render time).
+  const sortedIdsRef = useRef<string[]>([]);
 
   const load = useCallback(async () => {
     const [data, encounters] = await Promise.all([
@@ -63,11 +66,13 @@ export default function PeopleScreen({ onSelectPerson, refreshSignal }: Props) {
     return bMs - aMs;
   });
 
+  sortedIdsRef.current = sorted.map((p) => p.id);
+
   const renderItem = useCallback(
     ({ item }: { item: Person }) => (
       <TouchableOpacity
         style={styles.row}
-        onPress={() => onSelectPerson(item.id)}
+        onPress={() => onSelectPerson(item.id, sortedIdsRef.current)}
       >
         <Text style={styles.name}>
           {item.lastName ? `${item.firstName} ${item.lastName}` : item.firstName}

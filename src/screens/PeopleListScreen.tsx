@@ -19,8 +19,8 @@ export default function PeopleListScreen() {
   }, [navigation]);
 
   const handleSelectPerson = useCallback(
-    (personId: string) => {
-      navigation.navigate("PersonProfile", { personId });
+    (personId: string, peopleIds?: string[]) => {
+      navigation.navigate("PersonProfile", { personId, peopleIds });
     },
     [navigation],
   );

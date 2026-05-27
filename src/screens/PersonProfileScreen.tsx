@@ -42,7 +42,7 @@ interface FactRow {
 export default function PersonProfileScreen({
   route,
 }: RootStackScreenProps<"PersonProfile">) {
-  const { personId } = route.params;
+  const { personId, peopleIds } = route.params;
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
@@ -51,8 +51,20 @@ export default function PersonProfileScreen({
   const [person, setPerson] = useState<Person | null>(null);
   const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [prevPerson, setPrevPerson] = useState<Person | null>(null);
+  const [nextPerson, setNextPerson] = useState<Person | null>(null);
   // Tab order: 0 = Core, 1 = Facts (default), 2 = Encounters, 3 = Reminders.
   const [tabIndex, setTabIndex] = useState(1);
+
+  // Position within the peopleIds list (for header swipe nav).
+  const currentIdx = peopleIds ? peopleIds.indexOf(personId) : -1;
+  const prevId =
+    peopleIds && currentIdx > 0 ? peopleIds[currentIdx - 1] : undefined;
+  const nextId =
+    peopleIds && currentIdx >= 0 && currentIdx < peopleIds.length - 1
+      ? peopleIds[currentIdx + 1]
+      : undefined;
+  const currentHeaderSlot = prevId ? 1 : 0;
 
   const goToTab = useCallback(
     (index: number) => {
@@ -94,6 +106,41 @@ export default function PersonProfileScreen({
     const unsub = navigation.addListener("focus", load);
     return unsub;
   }, [navigation, load]);
+
+  // Prefetch neighbor people for header preview / smoother swipe nav.
+  useEffect(() => {
+    let cancelled = false;
+    if (prevId) {
+      getPersonById(prevId).then((p) => {
+        if (!cancelled) setPrevPerson(p);
+      });
+    } else {
+      setPrevPerson(null);
+    }
+    if (nextId) {
+      getPersonById(nextId).then((p) => {
+        if (!cancelled) setNextPerson(p);
+      });
+    } else {
+      setNextPerson(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [prevId, nextId]);
+
+  const onHeaderScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+      if (idx === currentHeaderSlot) return; // stayed on current
+      if (prevId && idx < currentHeaderSlot) {
+        navigation.replace("PersonProfile", { personId: prevId, peopleIds });
+      } else if (nextId && idx > currentHeaderSlot) {
+        navigation.replace("PersonProfile", { personId: nextId, peopleIds });
+      }
+    },
+    [width, currentHeaderSlot, prevId, nextId, peopleIds, navigation],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -161,34 +208,70 @@ export default function PersonProfileScreen({
     );
   }
 
+  const headerContent = (
+    <View style={styles.profileHeader}>
+      <Text style={styles.name}>{fullName(person)}</Text>
+      {person.nickname ? (
+        <Text style={styles.nickname}>{person.nickname}</Text>
+      ) : null}
+      {person.profession ? (
+        <Text style={styles.metAt}>{person.profession}</Text>
+      ) : null}
+      {person.firstMetLocation ? (
+        <Text style={styles.metAt}>
+          First met at {person.firstMetLocation}
+        </Text>
+      ) : null}
+      {person.birthday ? (
+        <Text style={styles.metAt}>
+          🎂 {formatBirthday(person.birthday)}
+        </Text>
+      ) : null}
+
+      <View style={styles.statsRow}>
+        <Stat label="Encounters" value={String(encounters.length)} />
+        {stats.lastSeen ? (
+          <Stat label="Last seen" value={stats.lastSeen} />
+        ) : null}
+      </View>
+    </View>
+  );
+
+  // If we have neighbors in the People list, wrap the header in a horizontal
+  // paged ScrollView so the user can swipe to the previous/next profile.
+  const hasNeighbors = !!(prevId || nextId);
+
   return (
     <View style={styles.container}>
-      <View style={styles.profileHeader}>
-        <Text style={styles.name}>{fullName(person)}</Text>
-        {person.nickname ? (
-          <Text style={styles.nickname}>{person.nickname}</Text>
-        ) : null}
-        {person.profession ? (
-          <Text style={styles.metAt}>{person.profession}</Text>
-        ) : null}
-        {person.firstMetLocation ? (
-          <Text style={styles.metAt}>
-            First met at {person.firstMetLocation}
-          </Text>
-        ) : null}
-        {person.birthday ? (
-          <Text style={styles.metAt}>
-            🎂 {formatBirthday(person.birthday)}
-          </Text>
-        ) : null}
-
-        <View style={styles.statsRow}>
-          <Stat label="Encounters" value={String(encounters.length)} />
-          {stats.lastSeen ? (
-            <Stat label="Last seen" value={stats.lastSeen} />
+      {hasNeighbors ? (
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          contentOffset={{ x: currentHeaderSlot * width, y: 0 }}
+          onMomentumScrollEnd={onHeaderScrollEnd}
+          style={styles.headerPager}
+        >
+          {prevId ? (
+            <View style={[{ width }, styles.headerSlotEmpty]}>
+              <Text style={styles.headerSlotHint}>
+                ← {prevPerson ? fullName(prevPerson) : "Previous"}
+              </Text>
+            </View>
           ) : null}
-        </View>
-      </View>
+          <View style={{ width }}>{headerContent}</View>
+          {nextId ? (
+            <View style={[{ width }, styles.headerSlotEmpty]}>
+              <Text style={styles.headerSlotHint}>
+                {nextPerson ? fullName(nextPerson) : "Next"} →
+              </Text>
+            </View>
+          ) : null}
+        </ScrollView>
+      ) : (
+        headerContent
+      )}
 
       <View style={styles.tabBar}>
         <TabButton
@@ -488,6 +571,21 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e5e5ea",
+  },
+  headerPager: {
+    flexGrow: 0,
+  },
+  headerSlotEmpty: {
+    padding: 20,
+    paddingBottom: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e5e5ea",
+  },
+  headerSlotHint: {
+    fontSize: 16,
+    color: "#8e8e93",
   },
   name: { fontSize: 26, fontWeight: "700", color: "#1c1c1e" },
   nickname: { fontSize: 18, fontWeight: "500", color: "#555", marginTop: 2 },
