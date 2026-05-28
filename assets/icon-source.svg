@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 124 124" fill="none">
+  <!-- Solid white background (square — iOS rounds at install) -->
+  <rect width="124" height="124" fill="#FFFFFF"/>
+
+  <!-- Body semicircle -->
+  <path d="M 16 108 A 46 46 0 0 1 108 108 Z" fill="#007AFF"/>
+
+  <!-- White gap (cuts the body so the handle visibly passes through) -->
+  <rect x="56" y="60" width="12" height="48" fill="#FFFFFF"/>
+
+  <!-- Handle: sharp top, rounded bottom -->
+  <path d="M 60 60 L 64 60 L 64 106 A 2 2 0 0 1 60 106 Z" fill="#007AFF"/>
+
+  <!-- Head -->
+  <circle cx="62" cy="38" r="20" stroke="#007AFF" stroke-width="4" fill="none"/>
+</svg>
