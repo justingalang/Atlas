@@ -92,6 +92,11 @@ export async function getEncountersByDate(date: Date): Promise<Encounter[]> {
   return snapshot.docs.map((d) => toEncounter(d)!);
 }
 
+/** Delete a single encounter by id. */
+export async function deleteEncounter(id: string): Promise<void> {
+  await deleteDoc(doc(db, COLLECTION, id));
+}
+
 /** Delete every encounter linked to a person. */
 export async function deleteEncountersForPerson(
   personId: string,

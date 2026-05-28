@@ -17,9 +17,7 @@ import type { RootStackScreenProps, RootStackParamList } from "../navigation/typ
 import {
   getPersonById,
   updatePerson,
-  deletePerson,
-  deleteEncountersForPerson,
-  deleteRemindersForPerson,
+  deletePersonCascade,
 } from "../services";
 
 export default function EditPersonScreen({
@@ -110,11 +108,7 @@ export default function EditPersonScreen({
           onPress: async () => {
             setDeleting(true);
             try {
-              await Promise.all([
-                deleteEncountersForPerson(personId),
-                deleteRemindersForPerson(personId),
-              ]);
-              await deletePerson(personId);
+              await deletePersonCascade(personId);
               // Pop the modal AND the now-stale profile screen behind it.
               navigation.pop(2);
             } catch (error) {

@@ -6,6 +6,7 @@ export {
   getAllPeople,
   updatePerson,
   deletePerson,
+  deletePersonCascade,
 } from "./personService";
 
 export {
@@ -16,6 +17,7 @@ export {
   getEncountersByDate,
   getRecentEncounters,
   getAllEncounters,
+  deleteEncounter,
   deleteEncountersForPerson,
 } from "./encounterService";
 

@@ -201,8 +201,17 @@ export default function EncounterForm({
       }
 
       let person: Person;
-      if (selectedPersonRef.current) {
-        // Explicit pick from 🔍 modal wins.
+      const selectedName = selectedPersonRef.current
+        ? selectedPersonRef.current.lastName
+          ? `${selectedPersonRef.current.firstName} ${selectedPersonRef.current.lastName}`
+          : selectedPersonRef.current.firstName
+        : null;
+      const selectionMatchesTyped =
+        !!selectedPersonRef.current &&
+        selectedName !== null &&
+        normalizeWho(selectedName) === normalizeWho(trimmedWho);
+      if (selectedPersonRef.current && selectionMatchesTyped) {
+        // Explicit pick from 🔍 modal (or prefill) — and the typed name still matches.
         person = selectedPersonRef.current;
       } else if (
         matchedRef.current &&
@@ -403,6 +412,10 @@ export default function EncounterForm({
 function parseLocalDate(str: string): Date {
   const [y, m, d] = str.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+function normalizeWho(s: string): string {
+  return s.trim().toLowerCase();
 }
 
 function formatDisplayDate(d: Date): string {

@@ -20,12 +20,15 @@ interface Props {
   value: string;
   onChangeText: (text: string) => void;
   onSelectPerson: (person: Person) => void;
+  /** Bump to force a re-fetch of the people list (e.g. after creating someone). */
+  refreshSignal?: number;
 }
 
 export default function PersonAutocomplete({
   value,
   onChangeText,
   onSelectPerson,
+  refreshSignal,
 }: Props) {
   const [people, setPeople] = useState<Person[]>([]);
   const [displayNames, setDisplayNames] = useState<Map<string, string>>(
@@ -39,7 +42,7 @@ export default function PersonAutocomplete({
       setPeople(data);
       setDisplayNames(resolveAllDisplayNames(data));
     });
-  }, []);
+  }, [refreshSignal]);
 
   const filtered = useMemo(() => {
     const norm = normalizeName(search);
