@@ -24,6 +24,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: ["@react-native-community/datetimepicker", "expo-font"],
   owner: "justingalang",
+  updates: {
+    url: "https://u.expo.dev/816d7e9d-121a-4a30-9d04-d00bf1157fcf",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   extra: {
     eas: {
       projectId: "816d7e9d-121a-4a30-9d04-d00bf1157fcf",
